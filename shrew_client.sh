@@ -1,9 +1,8 @@
 #!/bin/sh
+#Version 1
 rto=1
-#a1=net.get('a1')
-#serverIP=a1.IP()
 while true; do
-	iperf -c 10.0.0.1 -u -b 10M -t 1 &
+	iperf -c 10.0.0.1 -u -b 5M -t 0.5 &
 	rto=$($rto*2)
 	echo 'rto:'
 	echo $rto 
