@@ -1,0 +1,99 @@
+# CMU 18731 HW2
+# Code referenced from:git@bitbucket.org:huangty/cs144_bufferbloat.git
+# Edited by: Deepti Sunder Prakash
+
+#!/usr/bin/python
+
+from mininet.topo import Topo
+from mininet.node import CPULimitedHost
+from mininet.link import TCLink
+from mininet.net import Mininet
+from mininet.log import lg, info
+from mininet.util import dumpNodeConnections
+from mininet.cli import CLI
+
+from subprocess import Popen, PIPE
+from time import sleep, time
+from multiprocessing import Process
+from argparse import ArgumentParser
+
+import sys
+import os
+
+# Parse arguments
+
+parser = ArgumentParser(description="Shrew tests")
+parser.add_argument('--bw-host', '-B',
+                    dest="bw_host",
+                    type=float,
+                    action="store",
+                    help="Bandwidth of host links",
+                    required=True)
+parser.add_argument('--bw-net', '-b',
+                    dest="bw_net",
+                    type=float,
+                    action="store",
+                    help="Bandwidth of network link",
+                    required=True)
+parser.add_argument('--delay',
+                    dest="delay",
+                    type=float,
+                    help="Delay in milliseconds of host links",
+                    default='10ms')
+parser.add_argument('-n',
+                    dest="n",
+                    type=int,
+                    action="store",
+                    help="Number of nodes in one side of the dumbbell.",
+                    required=True)
+# Expt parameters
+args = parser.parse_args()
+
+class DumbbellTopo(Topo):
+    "Dumbbell topology for Shrew experiment"
+    def build(self, n=6, bw_net=100, delay='20ms', bw_host=10):
+	#TODO:Add your code to create the topology.
+	switch1 = self.addSwitch('s1')
+        switch2 = self.addSwitch('s2')
+        self.addLink(switch1, switch2,bw_host, delay)
+        for h in range(n):
+            if(n<=3):
+                if(n==3):   
+                    host = self.addHost('a1')
+                else:
+                    host = self.addHost('hI%s' % (h + 1))
+                # 10 Mbps, 20ms delay
+                self.addLink(host, switch1, bw_host, delay)
+            else :
+                if(n==6):   
+                    host = self.addHost('a2')
+                else:
+                    host = self.addHost('hR%s' % (h + 1 - 3))
+                # 10 Mbps, 20ms delay
+                self.addLink(host, switch2, bw_host, delay) 
+
+def bbnet():
+    "Create network and run shrew  experiment"
+    print "starting mininet ...."
+    topo = DumbbellTopo(n=args.n, bw_net=args.bw_net,
+                    delay='%sms' % (args.delay),
+                    bw_host=args.bw_host)
+    net = Mininet(topo=topo, host=CPULimitedHost, link=TCLink,
+                  autoPinCpus=True)
+    net.start()
+    dumpNodeConnections(net.hosts)
+
+    #TODO:Add your code to test reachability of hosts.
+    print "Testing network connectivity"
+    net.pingAll()
+    print "Testing bandwidth between hI1 and hR2"
+    hI1, a2 = net.get('hI1','a2')
+    net.iperf((hI1, a2))	//check
+    #TODO:Add your code to start long lived TCP flows between
+    #hosts on the left and right.
+
+    CLI(net)
+    net.stop()
+
+if __name__ == '__main__':
+    bbnet()
